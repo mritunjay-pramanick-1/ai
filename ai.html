@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Speech Search Assistant</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            padding: 30px;
+            animation: slideIn 0.8s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            color: #2c3e50;
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .search-section {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        #searchInput {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e1e8ed;
+            border-radius: 50px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #searchInput:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-voice {
+            background: #e74c3c;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .btn-voice:hover {
+            background: #c0392b;
+            transform: scale(1.05);
+        }
+
+        .btn-voice.listening {
+            background: #27ae60;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(39, 174, 96, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0); }
+        }
+
+        .status {
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 500;
+            color: #7f8c8d;
+            min-height: 24px;
+        }
+
+        .status.listening {
+            color: #27ae60;
+        }
+
+        .status.processing {
+            color: #f39c12;
+        }
+
+        .chat-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e1e8ed;
+            border-radius: 15px;
+            padding: 20px;
+            background: #fafbfc;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message.ai {
+            text-align: left;
+        }
+
+        .message-bubble {
+            display: inline-block;
+            padding: 12px 18px;
+            border-radius: 20px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .message.ai .message-bubble {
+            background: #ffffff;
+            color: #2c3e50;
+            border: 1px solid #e1e8ed;
+        }
+
+        .timestamp {
+            font-size: 0.8em;
+            color: #95a5a6;
+            margin-top: 5px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading-dots {
+            display: inline-flex;
+            gap: 4px;
+        }
+
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #667eea;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        .error {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 20px;
+            }
+            
+            .title {
+                font-size: 2em;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
+            .btn-voice {
+                width: 100%;
+                height: 50px;
+                border-radius: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">🎤 AI Search Assistant</h1>
+            <p class="subtitle">Speak your question or type to get intelligent answers</p>
+        </div>
+
+        <div class="error" id="errorMessage"></div>
+
+        <div class="search-section">
+            <div class="input-group">
+                <input type="text" id="searchInput" placeholder="Ask me anything..." />
+                <button class="btn btn-primary" id="searchBtn">
+                    🔍 Search
+                </button>
+                <button class="btn btn-voice" id="voiceBtn" title="Click to speak">
+                    🎤
+                </button>
+            </div>
+            <div class="status" id="status">Ready to help! Click the microphone or type your question.</div>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="message ai">
+                <div class="message-bubble">
+                    Hello! I'm your AI assistant. You can ask me questions by speaking (click the microphone) or typing. I can help with general knowledge, explanations, calculations, and much more!
+                </div>
+                <div class="timestamp">Just now</div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="loading-dots">
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+            </div>
+            <div>Thinking...</div>
+        </div>
+    </div>
+
+    <script>
+        class AISearchAssistant {
+            constructor() {
+                this.recognition = null;
+                this.isListening = false;
+                this.initializeElements();
+                this.initializeSpeechRecognition();
+                this.bindEvents();
+            }
+
+            initializeElements() {
+                this.$searchInput = $('#searchInput');
+                this.$searchBtn = $('#searchBtn');
+                this.$voiceBtn = $('#voiceBtn');
+                this.$status = $('#status');
+                this.$chatContainer = $('#chatContainer');
+                this.$loading = $('#loading');
+                this.$errorMessage = $('#errorMessage');
+            }
+
+            initializeSpeechRecognition() {
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    this.recognition = new SpeechRecognition();
+                    this.recognition.continuous = false;
+                    this.recognition.interimResults = false;
+                    this.recognition.lang = 'en-US';
+
+                    this.recognition.onstart = () => {
+                        this.isListening = true;
+                        this.$voiceBtn.addClass('listening');
+                        this.$status.addClass('listening').text('🎤 Listening... Speak now!');
+                    };
+
+                    this.recognition.onresult = (event) => {
+                        const transcript = event.results[0][0].transcript;
+                        this.$searchInput.val(transcript);
+                        this.handleSearch(transcript);
+                    };
+
+                    this.recognition.onerror = (event) => {
+                        this.showError('Speech recognition error: ' + event.error);
+                        this.resetVoiceButton();
+                    };
+
+                    this.recognition.onend = () => {
+                        this.resetVoiceButton();
+                    };
+                } else {
+                    this.$voiceBtn.prop('disabled', true).attr('title', 'Speech recognition not supported');
+                    this.showError('Speech recognition is not supported in your browser.');
+                }
+            }
+
+            bindEvents() {
+                this.$searchBtn.on('click', () => {
+                    const query = this.$searchInput.val().trim();
+                    if (query) {
+                        this.handleSearch(query);
+                    }
+                });
+
+                this.$searchInput.on('keypress', (e) => {
+                    if (e.which === 13) {
+                        const query = this.$searchInput.val().trim();
+                        if (query) {
+                            this.handleSearch(query);
+                        }
+                    }
+                });
+
+                this.$voiceBtn.on('click', () => {
+                    if (this.isListening) {
+                        this.recognition.stop();
+                    } else {
+                        this.startListening();
+                    }
+                });
+            }
+
+            startListening() {
+                if (this.recognition) {
+                    try {
+                        this.recognition.start();
+                    } catch (error) {
+                        this.showError('Could not start speech recognition. Please try again.');
+                    }
+                } else {
+                    this.showError('Speech recognition is not available.');
+                }
+            }
+
+            resetVoiceButton() {
+                this.isListening = false;
+                this.$voiceBtn.removeClass('listening');
+                this.$status.removeClass('listening processing').text('Ready to help! Click the microphone or type your question.');
+            }
+
+            handleSearch(query) {
+                this.addMessage(query, 'user');
+                this.$searchInput.val('');
+                this.$status.addClass('processing').text('🤔 Processing your question...');
+                this.$loading.show();
+                
+                // Simulate AI processing
+                setTimeout(() => {
+                    const response = this.generateAIResponse(query);
+                    this.addMessage(response, 'ai');
+                    this.$loading.hide();
+                    this.$status.removeClass('processing').text('Ready for your next question!');
+                }, 1500 + Math.random() * 1000);
+            }
+
+            generateAIResponse(query) {
+                const responses = {
+                    greetings: [
+                        "Hello! How can I help you today?",
+                        "Hi there! What would you like to know?",
+                        "Greetings! I'm here to assist you."
+                    ],
+                    weather: [
+                        "I'd recommend checking a current weather service for accurate weather information. Weather conditions change frequently and I want to make sure you get the most up-to-date forecast.",
+                        "For current weather conditions, I'd suggest checking your local weather app or website for the most accurate and timely information."
+                    ],
+                    math: [
+                        "I can help with mathematical calculations! Could you provide the specific numbers or equation you'd like me to work with?",
+                        "Mathematics is one of my strengths! What calculation would you like me to help you with?"
+                    ],
+                    general: [
+                        "That's an interesting question! Based on what I know, I'd say that this topic involves several important considerations that are worth exploring further.",
+                        "Great question! This is a topic that has multiple aspects to consider. Let me share some key points that might be helpful.",
+                        "I'd be happy to help with that! This subject has some fascinating elements that are worth discussing.",
+                        "That's a thoughtful inquiry! There are several ways to approach this topic, and I think you'll find the answer quite interesting."
+                    ],
+                    time: [
+                        `The current time is ${new Date().toLocaleTimeString()}.`,
+                        `Right now it's ${new Date().toLocaleTimeString()}.`
+                    ],
+                    how: [
+                        "That's a great 'how' question! The process typically involves several steps, and the approach can vary depending on the specific context and requirements.",
+                        "Excellent question about the process! There are usually multiple ways to approach this, and I'd recommend considering the most efficient method for your situation."
+                    ],
+                    what: [
+                        "That's a wonderful 'what' question! This concept encompasses several important aspects that are worth understanding in detail.",
+                        "Great question! This topic covers multiple dimensions and has some really interesting characteristics."
+                    ],
+                    why: [
+                        "That's a thoughtful 'why' question! The reasoning behind this involves several factors that work together to create the outcome.",
+                        "Excellent question about the reasoning! There are usually multiple contributing factors that help explain this phenomenon."
+                    ]
+                };
+
+                const queryLower = query.toLowerCase();
+                
+                if (queryLower.includes('hello') || queryLower.includes('hi') || queryLower.includes('hey')) {
+                    return this.getRandomResponse(responses.greetings);
+                } else if (queryLower.includes('weather') || queryLower.includes('temperature')) {
+                    return this.getRandomResponse(responses.weather);
+                } else if (queryLower.includes('math') || queryLower.includes('calculate') || /\d+[\+\-\*\/]\d+/.test(queryLower)) {
+                    return this.getRandomResponse(responses.math);
+                } else if (queryLower.includes('time')) {
+                    return this.getRandomResponse(responses.time);
+                } else if (queryLower.startsWith('how ')) {
+                    return this.getRandomResponse(responses.how);
+                } else if (queryLower.startsWith('what ')) {
+                    return this.getRandomResponse(responses.what);
+                } else if (queryLower.startsWith('why ')) {
+                    return this.getRandomResponse(responses.why);
+                } else {
+                    return this.getRandomResponse(responses.general);
+                }
+            }
+
+            getRandomResponse(responseArray) {
+                return responseArray[Math.floor(Math.random() * responseArray.length)];
+            }
+
+            addMessage(message, type) {
+                const timestamp = new Date().toLocaleTimeString();
+                const messageHtml = `
+                    <div class="message ${type}">
+                        <div class="message-bubble">${message}</div>
+                        <div class="timestamp">${timestamp}</div>
+                    </div>
+                `;
+                this.$chatContainer.append(messageHtml);
+                this.$chatContainer.scrollTop(this.$chatContainer[0].scrollHeight);
+            }
+
+            showError(message) {
+                this.$errorMessage.text(message).show();
+                setTimeout(() => {
+                    this.$errorMessage.hide();
+                }, 5000);
+            }
+        }
+
+        // Initialize the application when the document is ready
+        $(document).ready(() => {
+            new AISearchAssistant();
+        });
+    </script>
+</body>
+</html>
